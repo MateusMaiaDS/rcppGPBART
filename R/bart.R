@@ -92,7 +92,7 @@ r_bart <- function(x_train,
 
         # Getting the main function
         bart_obj <- bart(x_train = x_train,
-                         y = y_scale,
+                         y = (y_scale),
                          x_test = x_test,
                          x_cut = xcut,
                          n_tree = n_tree,

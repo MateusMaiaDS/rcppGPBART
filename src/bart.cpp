@@ -139,10 +139,10 @@ void Tree::grow(arma::vec res_values,
                 n_test = g_node->obs_test.size();
 
                 // Selecting the column of the x_curr
-                arma::vec x_current_node(100) ;
+                Rcpp::NumericVector x_current_node ;
 
                 for(int i = 0; i<g_node->obs_train.size();i++) {
-                        x_current_node(i) = (x_train(g_node->obs_train(i),split_var));
+                        x_current_node.push_back(x_train(g_node->obs_train(i),split_var));
                 }
 
                 min_x_current_node = min(x_current_node);
@@ -393,7 +393,7 @@ void Tree::change(arma::vec res_values,
                 // Getting the split var
                 split_var = sample_int(p);
 
-
+                // cout << "ERROR 1 " << endl;
                 // Selecting the x_curr
                 Rcpp::NumericVector x_current_node ;
                 for(int i = 0; i<c_node->obs_train.size();i++) {
@@ -461,11 +461,15 @@ void Tree::change(arma::vec res_values,
         for(int j=0; j<list_node[nog_original_index].obs_train.size();j++){
 
                 // UPDATING FOR THE CURRENT NODES
-                if(x_train(c_node->obs_train(j),c_node->var)<=c_node->var_split){
+                // cout << "ERROR 2 " << endl;
+
+                if(x_train(c_node->obs_train(j),list_node[nog_original_index+1].var)<=list_node[nog_original_index+1].var_split){
                         curr_resid_left_train.push_back(res_values(c_node->obs_train(j)));
                 } else {
                         curr_resid_right_train.push_back(res_values(c_node->obs_train(j)));
                 }
+
+                // cout << "ERROR 3 " << endl;
 
                 // Updating for the NEW CHANGED NODES
                 if(x_train(c_node->obs_train(j),split_var)<=split_var_rule){
@@ -476,9 +480,13 @@ void Tree::change(arma::vec res_values,
                         new_right_train_index.push_back(c_node->obs_train(j));
                         new_resid_right_train.push_back(res_values(c_node->obs_train(j)));
                 }
+                // cout << "ERROR 4 " << endl;
 
 
         }
+
+
+        // cout << "ERROR 5 " << endl;
 
         /// Iterating over the test and test
         for(int i=0; i<list_node[nog_original_index].obs_test.size();i++){
@@ -491,6 +499,7 @@ void Tree::change(arma::vec res_values,
                 }
         }
 
+        // cout << "ERROR 6 " << endl;
 
 
         // Calculating all loglikelihood
@@ -585,8 +594,8 @@ List bart(const arma::mat& x_train,
         int n_train = x_train.n_rows;
         int n_test = x_test.n_rows;
         int n_post = (n_mcmc-n_burn);
-        arma::mat y_train_hat_post(n_post,n_train);
-        arma::mat y_test_hat_post(n_post,n_test);
+        arma::mat y_train_hat_post(n_train,n_post);
+        arma::mat y_test_hat_post(n_test,n_post);
 
         // Getting tau posterior
         arma::vec tau_post(n_post);
@@ -602,8 +611,8 @@ List bart(const arma::mat& x_train,
         }
 
         // Creating a matrix of zeros of y_hat
-        y_train_hat_post.fill(0.0);
-        y_test_hat_post.fill(0.0);
+        y_train_hat_post.zeros();
+        y_test_hat_post.zeros();
 
         // Creating the partial residuals and partial predictions
         arma::vec partial_pred(n_train), partial_residuals(n_train);
@@ -611,17 +620,20 @@ List bart(const arma::mat& x_train,
         arma::vec prediction_test_sum(n_test);
 
         // Initializing the zero values
-        partial_pred.fill(0.0);
-        partial_residuals.fill(0.0);
-        prediction_train.fill(0.0);
-        prediction_test.fill(0.0);
+        partial_pred.zeros();
+        partial_residuals.zeros();
+        prediction_train.zeros();
+        prediction_test.zeros();
         arma::mat tree_fits_store(n_train,n_tree);
-        tree_fits_store.fill(0.0);
+        tree_fits_store.zeros();
 
         // Iterating over the MCMC samples
         for(int i = 0; i<n_mcmc; i++) {
 
-                prediction_test_sum.fill(0.0);
+
+                prediction_test_sum.zeros();
+
+
 
                 for(int t = 0; t<n_tree;t++){
 
@@ -644,13 +656,19 @@ List bart(const arma::mat& x_train,
 
                         // Choosing the verb
                         if( verb < 0.3){
+                                // cout << " GROW THE TREE " << endl;
                                 current_trees[t].grow(partial_residuals,x_train,x_test,n_min_size,x_cut,tau,tau_mu,alpha,beta);
                         } else if(verb >=0.3 & verb<0.6){
+                                // cout << " PRUNE THE TREE " << endl;
                                 current_trees[t].prune(partial_residuals,tau,tau_mu,alpha,beta);
                         } else {
+                                // cout << " CHANGE THE TREE" << endl;
                                 current_trees[t].change(partial_residuals,x_train,x_test,n_min_size,x_cut,tau,tau_mu,alpha,beta);
                         }
 
+
+                        // cout << " VERB SUCCESSS!!! " << endl;
+                        // cout << "Iter number "<< i << endl;
 
                         // Updating the mu parameters
                         current_trees[t].update_mu_tree(partial_residuals,tau,tau_mu);
@@ -667,9 +685,11 @@ List bart(const arma::mat& x_train,
                 // Updating tau
                 tau = update_tau(y,partial_pred,tau,tau_mu);
 
+                // cout << "Iter number " << i << endl;
+
                 if(i >= n_burn){
-                        y_train_hat_post.row(post_counter) = partial_pred;
-                        y_test_hat_post.row(post_counter) = prediction_test_sum;
+                        y_train_hat_post.col(post_counter) = partial_pred;
+                        y_test_hat_post.col(post_counter) = prediction_test_sum;
 
                         // Updating tau
                         tau_post(post_counter) = tau;
