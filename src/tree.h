@@ -3,10 +3,9 @@
 #include<iostream>
 #include<armadillo>
 #include <cstdlib>
-
+#include<RcppArmadillo.h>
 #include<vector>
 
-#include<Rcpp.h>
 using namespace std;
 
 
@@ -120,12 +119,14 @@ public:
         void update_mu_tree_linero(arma::vec& res_val, double tau, double tau_mu,int& n_leaves, double& sq_mu_norm);
         // Growing a tree
         void grow(arma::vec res_values,
-                  const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& xcut,
+                  const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
                   double&tau, double& tau_mu, double& alpha, double& beta);
         // Creating the verb to prune a tree
-        void prune(int& id_node);
+        void prune(arma::vec& res_val, double tau, double tau_mu, double& alpha, double& beta);
         // Change a tree
-        void change(const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const arma::mat& xcut,int& id_t,int& id_node);
+        void change(arma::vec res_values,
+                    const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
+                    double&tau, double& tau_mu, double& alpha, double& beta);
         // Function to calculate the tree prior loglikelihood
         double prior_loglilke(double alpha, double beta);
         // Updating the tree predictions

@@ -11,15 +11,40 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// bart
+List bart(const arma::mat& x_train, const arma::vec& y, const arma::mat& x_test, const Rcpp::NumericMatrix& x_cut, int n_tree, int n_mcmc, int n_burn, int n_min_size, double tau, double mu, double tau_mu, double alpha, double beta, double a_tau, double d_tau);
+RcppExport SEXP _rcppGPBART_bart(SEXP x_trainSEXP, SEXP ySEXP, SEXP x_testSEXP, SEXP x_cutSEXP, SEXP n_treeSEXP, SEXP n_mcmcSEXP, SEXP n_burnSEXP, SEXP n_min_sizeSEXP, SEXP tauSEXP, SEXP muSEXP, SEXP tau_muSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP a_tauSEXP, SEXP d_tauSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< int >::type n_tree(n_treeSEXP);
+    Rcpp::traits::input_parameter< int >::type n_mcmc(n_mcmcSEXP);
+    Rcpp::traits::input_parameter< int >::type n_burn(n_burnSEXP);
+    Rcpp::traits::input_parameter< int >::type n_min_size(n_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
+    Rcpp::traits::input_parameter< double >::type d_tau(d_tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(bart(x_train, y, x_test, x_cut, n_tree, n_mcmc, n_burn, n_min_size, tau, mu, tau_mu, alpha, beta, a_tau, d_tau));
+    return rcpp_result_gen;
+END_RCPP
+}
 // test_grow_tree
-void test_grow_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, arma:: mat x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
+void test_grow_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
 RcppExport SEXP _rcppGPBART_test_grow_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
     Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
-    Rcpp::traits::input_parameter< arma:: mat >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
@@ -29,9 +54,60 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// test_prune_tree
+void test_prune_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
+RcppExport SEXP _rcppGPBART_test_prune_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    test_prune_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu);
+    return R_NilValue;
+END_RCPP
+}
+// test_change_tree
+void test_change_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
+RcppExport SEXP _rcppGPBART_test_change_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    test_change_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu);
+    return R_NilValue;
+END_RCPP
+}
+// matrix_leak
+arma::mat matrix_leak(arma::mat x_train);
+RcppExport SEXP _rcppGPBART_matrix_leak(SEXP x_trainSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    rcpp_result_gen = Rcpp::wrap(matrix_leak(x_train));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rcppGPBART_bart", (DL_FUNC) &_rcppGPBART_bart, 15},
     {"_rcppGPBART_test_grow_tree", (DL_FUNC) &_rcppGPBART_test_grow_tree, 9},
+    {"_rcppGPBART_test_prune_tree", (DL_FUNC) &_rcppGPBART_test_prune_tree, 9},
+    {"_rcppGPBART_test_change_tree", (DL_FUNC) &_rcppGPBART_test_change_tree, 9},
+    {"_rcppGPBART_matrix_leak", (DL_FUNC) &_rcppGPBART_matrix_leak, 1},
     {NULL, NULL, 0}
 };
 
