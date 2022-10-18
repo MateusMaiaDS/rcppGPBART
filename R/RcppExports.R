@@ -5,19 +5,35 @@ bart <- function(x_train, y, x_test, x_cut, n_tree, n_mcmc, n_burn, n_min_size, 
     .Call('_rcppGPBART_bart', PACKAGE = 'rcppGPBART', x_train, y, x_test, x_cut, n_tree, n_mcmc, n_burn, n_min_size, tau, mu, tau_mu, alpha, beta, a_tau, d_tau)
 }
 
-test_grow_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu) {
-    invisible(.Call('_rcppGPBART_test_grow_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu))
+test_grow_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times) {
+    invisible(.Call('_rcppGPBART_test_grow_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times))
+}
+
+NEW_test_grow_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times) {
+    invisible(.Call('_rcppGPBART_NEW_test_grow_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times))
 }
 
 test_prune_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu) {
     invisible(.Call('_rcppGPBART_test_prune_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu))
 }
 
+NEW_test_prune_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, p_times) {
+    invisible(.Call('_rcppGPBART_NEW_test_prune_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, p_times))
+}
+
 test_change_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu) {
     invisible(.Call('_rcppGPBART_test_change_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu))
 }
 
+NEW_test_change_tree <- function(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, n_change) {
+    invisible(.Call('_rcppGPBART_NEW_test_change_tree', PACKAGE = 'rcppGPBART', x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, n_change))
+}
+
 matrix_leak <- function(x_train) {
     .Call('_rcppGPBART_matrix_leak', PACKAGE = 'rcppGPBART', x_train)
+}
+
+test <- function() {
+    invisible(.Call('_rcppGPBART_test', PACKAGE = 'rcppGPBART'))
 }
 

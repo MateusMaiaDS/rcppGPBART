@@ -37,20 +37,40 @@ BEGIN_RCPP
 END_RCPP
 }
 // test_grow_tree
-void test_grow_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
-RcppExport SEXP _rcppGPBART_test_grow_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
+void test_grow_tree(Rcpp::NumericMatrix x_train, Rcpp::NumericMatrix x_test, Rcpp::NumericVector y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu, int g_times);
+RcppExport SEXP _rcppGPBART_test_grow_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP, SEXP g_timesSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
-    Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type y_train(y_trainSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
     Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
     Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
-    test_grow_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu);
+    Rcpp::traits::input_parameter< int >::type g_times(g_timesSEXP);
+    test_grow_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times);
+    return R_NilValue;
+END_RCPP
+}
+// NEW_test_grow_tree
+void NEW_test_grow_tree(arma::mat x_train, arma::mat x_test, arma::vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu, int g_times);
+RcppExport SEXP _rcppGPBART_NEW_test_grow_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP, SEXP g_timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    Rcpp::traits::input_parameter< int >::type g_times(g_timesSEXP);
+    NEW_test_grow_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, g_times);
     return R_NilValue;
 END_RCPP
 }
@@ -72,6 +92,25 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// NEW_test_prune_tree
+void NEW_test_prune_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu, double p_times);
+RcppExport SEXP _rcppGPBART_NEW_test_prune_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP, SEXP p_timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    Rcpp::traits::input_parameter< double >::type p_times(p_timesSEXP);
+    NEW_test_prune_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, p_times);
+    return R_NilValue;
+END_RCPP
+}
 // test_change_tree
 void test_change_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu);
 RcppExport SEXP _rcppGPBART_test_change_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
@@ -90,6 +129,25 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// NEW_test_change_tree
+void NEW_test_change_tree(arma::mat x_train, arma::mat x_test, arma:: vec y_train, Rcpp::NumericMatrix x_cut, double alpha, double beta, int node_min_size, double tau, double tau_mu, int n_change);
+RcppExport SEXP _rcppGPBART_NEW_test_change_tree(SEXP x_trainSEXP, SEXP x_testSEXP, SEXP y_trainSEXP, SEXP x_cutSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP node_min_sizeSEXP, SEXP tauSEXP, SEXP tau_muSEXP, SEXP n_changeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x_train(x_trainSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< arma:: vec >::type y_train(y_trainSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x_cut(x_cutSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    Rcpp::traits::input_parameter< int >::type n_change(n_changeSEXP);
+    NEW_test_change_tree(x_train, x_test, y_train, x_cut, alpha, beta, node_min_size, tau, tau_mu, n_change);
+    return R_NilValue;
+END_RCPP
+}
 // matrix_leak
 arma::mat matrix_leak(arma::mat x_train);
 RcppExport SEXP _rcppGPBART_matrix_leak(SEXP x_trainSEXP) {
@@ -101,13 +159,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test
+void test();
+RcppExport SEXP _rcppGPBART_test() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    test();
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcppGPBART_bart", (DL_FUNC) &_rcppGPBART_bart, 15},
-    {"_rcppGPBART_test_grow_tree", (DL_FUNC) &_rcppGPBART_test_grow_tree, 9},
+    {"_rcppGPBART_test_grow_tree", (DL_FUNC) &_rcppGPBART_test_grow_tree, 10},
+    {"_rcppGPBART_NEW_test_grow_tree", (DL_FUNC) &_rcppGPBART_NEW_test_grow_tree, 10},
     {"_rcppGPBART_test_prune_tree", (DL_FUNC) &_rcppGPBART_test_prune_tree, 9},
+    {"_rcppGPBART_NEW_test_prune_tree", (DL_FUNC) &_rcppGPBART_NEW_test_prune_tree, 10},
     {"_rcppGPBART_test_change_tree", (DL_FUNC) &_rcppGPBART_test_change_tree, 9},
+    {"_rcppGPBART_NEW_test_change_tree", (DL_FUNC) &_rcppGPBART_NEW_test_change_tree, 10},
     {"_rcppGPBART_matrix_leak", (DL_FUNC) &_rcppGPBART_matrix_leak, 1},
+    {"_rcppGPBART_test", (DL_FUNC) &_rcppGPBART_test, 0},
     {NULL, NULL, 0}
 };
 

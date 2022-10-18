@@ -50,7 +50,7 @@ void Tree::update_mu_tree(arma::vec & res_val, double tau, double tau_mu){
 
         // Iterating over all nodes
         for(int i = 0; i<list_node.size();i++){
-                if(list_node[i].isTerminal()==1){
+                if(list_node[i].isTerminal()){
                         list_node[i].update_mu(res_val,tau,tau_mu);
                 }
         }
@@ -58,9 +58,190 @@ void Tree::update_mu_tree(arma::vec & res_val, double tau, double tau_mu){
 }
 
 
+// Grow a new tree
+void Tree::grow_new_tree(const arma::mat& x_train, const arma::mat& x_test,
+                int node_min_size, const Rcpp:: NumericMatrix& x_cut,
+                double &tau, double& tau_mu, double& alpha, double& beta,
+                int& id_t, int & id_node){
+
+
+        // Defining the number of covariates
+        int p = x_train.n_cols;
+        int cov_trial_counter = 0; // To count if all the covariate were tested
+        int valid_split_indicator = 0;
+        int n_train,n_test;
+        int g_original_index;
+        int split_var;
+        int max_index;
+        int g_index;
+        double min_x_current_node;
+        double max_x_current_node;
+
+
+        Rcpp::NumericVector x_cut_valid; // Defining the vector of valid "split rules" based on xcut and the terminal node
+        Rcpp::NumericVector x_cut_candidates;
+        Node* g_node; // Node to be grow
+        // Select a terminal node to be randomly selected to split
+        vector<Node> candidate_nodes = getTerminals();
+        int n_t_node ;
+
+
+        // Find a valid split indicator within a valid node
+        while(valid_split_indicator==0){
+
+                // Getting the number of terminal nodes
+                n_t_node = candidate_nodes.size();
+
+                // Getting a NumericVector of all node index
+                Rcpp::NumericVector all_node_index;
+
+                // Selecting a random terminal node
+                g_index = sample_int(candidate_nodes.size());
+
+                // Iterating over all nodes
+
+                for(int i=0;i<list_node.size();i++){
+
+                        all_node_index.push_back(list_node[i].index); // Adding the index into the list
+
+                        if(list_node[i].index==candidate_nodes[g_index].index){
+                                g_original_index = i;
+                        }
+
+                };
+
+
+                // Getting the maximum index in case to build the new indexes for the new terminal nodes
+                max_index = max(all_node_index);
+
+                // Selecting the terminal node
+                g_node = &candidate_nodes[g_index];
+
+                // Selecting the random rule
+                split_var = sample_int(p);
+
+                // Getting the number of train
+                n_train = g_node->obs_train.size();
+                n_test = g_node->obs_test.size();
+
+                // Selecting the column of the x_curr
+                Rcpp::NumericVector x_current_node ;
+
+                for(int i = 0; i<g_node->obs_train.size();i++) {
+                        x_current_node.push_back(x_train(g_node->obs_train(i),split_var));
+                }
+
+                min_x_current_node = min(x_current_node);
+                max_x_current_node = max(x_current_node);
+
+                // Getting available xcut variables
+                x_cut_candidates = x_cut(_,split_var);
+
+                // Create a vector of splits that will lead to nontrivial terminal nodes
+                for(int k = 0; k<x_cut_candidates.size();k++){
+                        if((x_cut_candidates(k)>min_x_current_node) & (x_cut_candidates(k)<max_x_current_node)){
+                                x_cut_valid.push_back(x_cut_candidates(k));
+                        }
+                }
+
+                // Do not grow a tree and skip it or select a new tree
+                if(x_cut_valid.size()==0){
+
+                        cov_trial_counter++;
+                        // CHOOSE ANOTHER SPLITING RULE - if reach the limit p do not do anything
+                        if(cov_trial_counter == p){
+                                id_t = 1;
+                                id_node = -1;
+                                return;
+                        }
+
+                } else {
+
+                        // Verifying that a valid split was selected
+                        valid_split_indicator = 1;
+
+                }
+        }
+
+        // If there's not enough observations
+        if(g_node->obs_train.size()<2*node_min_size){
+                return;
+
+        }
+
+
+        // Sample a g_var
+        double split_var_rule = x_cut_valid(sample_int(x_cut_valid.size()));
+
+        // Getting the observations from left and right node
+        Rcpp::NumericVector new_left_train_index;
+        Rcpp::NumericVector new_right_train_index;
+        Rcpp::NumericVector curr_obs_train;
+
+        // Same but for the test
+        // Getting the observations from left and right node
+        Rcpp::NumericVector new_left_test_index;
+        Rcpp::NumericVector new_right_test_index;
+        Rcpp::NumericVector curr_obs_test;
+
+
+        // Iterating over train and test
+        for(int j = 0; j< g_node->obs_train.size(); j++) {
+                if(x_train(g_node->obs_train(j),split_var) <= split_var_rule){
+                        new_left_train_index.push_back(g_node->obs_train(j));
+                } else {
+                        new_right_train_index.push_back(g_node->obs_train(j));
+                }
+        }
+
+        // Iterating over test and test
+        for(int j = 0; j< g_node->obs_test.size(); j++) {
+                if(x_test(g_node->obs_test(j),split_var) <= split_var_rule){
+                        new_left_test_index.push_back(g_node->obs_test(j));
+                } else {
+                        new_right_test_index.push_back(g_node->obs_test(j));
+                }
+        }
+
+
+        // Updating the id for posterior calculatins
+        id_node = g_original_index;
+
+        // Updating the current node
+         list_node[g_original_index].left = max_index+1;
+         list_node[g_original_index]. right = max_index+2;
+
+         // Updating the current tree
+         list_node.insert(list_node.begin()+g_original_index+1,
+                          Node(max_index+1,
+                               new_left_train_index,
+                               new_left_test_index,
+                               -1,
+                               -1,
+                               g_node -> depth+1,
+                               split_var,
+                               split_var_rule,
+                               0));
+
+         list_node.insert(list_node.begin()+g_original_index+2,
+                          Node(max_index+2,
+                               new_right_train_index,
+                               new_right_test_index,
+                               -1,
+                               -1,
+                               g_node -> depth+1,
+                               split_var,
+                               split_var_rule,
+                               0));
+
+        // Finishing the process
+        return;
+
+
+}
 
 // Growing a tree
-void Tree::grow(arma::vec res_values,
+void Tree::grow(arma::vec& res_values,
                 const arma::mat& x_train,const arma::mat& x_test,
                 int node_min_size,const Rcpp::NumericMatrix& x_cut,
                 double& tau, double& tau_mu, double& alpha, double& beta){
@@ -86,8 +267,11 @@ void Tree::grow(arma::vec res_values,
         vector<Node> candidate_nodes = getTerminals();
         int n_t_node ;
 
+
         // Find a valid split indicator within a valid node
         while(valid_split_indicator==0){
+
+                // Rcpp::NumericVector x_cut_valid; // Defining the vector of valid "split rules" based on xcut and the terminal node
 
                 // Getting the nog counter
                 nog_counter = 0;
@@ -113,13 +297,11 @@ void Tree::grow(arma::vec res_values,
                         }
 
                         // Getting nog (PROPER ONE FOR THE TRANSITION)
-                        if(list_node[i].left != -1 & list_node[i].right != -1){
-                                if(list_node[list_node[i].left].left == -1 & list_node[list_node[i].left].right == -1){
-                                        if(list_node[list_node[i].right].left == -1 & list_node[list_node[i].right].right == -1){
+                        if(list_node[i].noTerminal()){
+                              if(list_node[i+1].isTerminal() && list_node[i+2].isTerminal()){
                                                 if(list_node[i].depth==candidate_nodes[g_index].depth){
                                                         nog_counter++;
                                                 };
-                                        };
                                 };
                         };
                 };
@@ -153,7 +335,7 @@ void Tree::grow(arma::vec res_values,
 
                 // Create a vector of splits that will lead to nontrivial terminal nodes
                 for(int k = 0; k<x_cut_candidates.size();k++){
-                        if(x_cut_candidates(k)>min_x_current_node && x_cut_candidates(k)<max_x_current_node){
+                        if((x_cut_candidates(k)>min_x_current_node) & (x_cut_candidates(k)<max_x_current_node)){
                                 x_cut_valid.push_back(x_cut_candidates(k));
                         }
                 }
@@ -175,6 +357,13 @@ void Tree::grow(arma::vec res_values,
                 }
         }
 
+        // If there's not enough observations
+        if(g_node->obs_train.size()<2*node_min_size){
+                return;
+
+        }
+
+
         // Sample a g_var
         double split_var_rule = x_cut_valid(sample_int(x_cut_valid.size()));
 
@@ -184,7 +373,7 @@ void Tree::grow(arma::vec res_values,
         Rcpp::NumericVector new_right_train_index;
         Rcpp::NumericVector resid_left_train;
         Rcpp::NumericVector resid_right_train;
-        Rcpp::NumericVector curr_obs_train; // Observations that belong to that terminal node
+        // Rcpp::NumericVector curr_obs_train; // Observations that belong to that terminal node
 
         // Same from above but for test observations
         // Getting observations that are on the left and the ones that are in the right
@@ -192,16 +381,16 @@ void Tree::grow(arma::vec res_values,
         Rcpp::NumericVector new_right_test_index;
         Rcpp::NumericVector resid_left_test;
         Rcpp::NumericVector resid_right_test;
-        Rcpp::NumericVector curr_obs_test; // Observations that belong to that terminal node
+        // Rcpp::NumericVector curr_obs_test; // Observations that belong to that terminal node
 
         // Get the current vector of residuals
         Rcpp::NumericVector curr_res;
 
         /// Iterating over the train and test
-        for(int j=0; j<n_train;j++){
+        for(int j=0; j<g_node -> obs_train.size();j++){
 
                 // Getting the current node of residuals
-                curr_res.push_back(res_values[g_node -> obs_train(j)]);
+                curr_res.push_back(res_values(g_node -> obs_train(j)));
 
                 if(x_train(g_node->obs_train(j),split_var)<=split_var_rule){
                         new_left_train_index.push_back(g_node->obs_train(j));
@@ -215,7 +404,7 @@ void Tree::grow(arma::vec res_values,
         }
 
         /// Iterating over the test and test
-        for(int i=0; i<n_test;i++){
+        for(int i=0; i< g_node -> obs_test.size();i++){
                 if(x_test(g_node->obs_test(i),split_var)<=split_var_rule){
                         // Saving the index
                         new_left_test_index.push_back(g_node->obs_test(i));
@@ -224,11 +413,6 @@ void Tree::grow(arma::vec res_values,
 
                 }
         }
-
-
-        // Updating the current node
-        list_node[g_original_index].left = max_index+1;
-        list_node[g_original_index].right = max_index+2;
 
         Node new_left_node = Node(max_index+1,
                                   new_left_train_index,
@@ -254,10 +438,21 @@ void Tree::grow(arma::vec res_values,
         // Calculating all loglikelihood
         double log_acceptance = loglikelihood(resid_left_train,tau,tau_mu) + loglikelihood(resid_right_train,tau,tau_mu) - loglikelihood(curr_res,tau,tau_mu)+ // Node loglikelihood
                 log(0.3/nog_counter)-log(0.3/candidate_nodes.size())+ // Transition prob
-                2*log(1-alpha/pow(1+(list_node[g_original_index].depth+1),beta))+beta*log(alpha*(1+list_node[g_original_index].depth))-log(1-alpha/pow(1+list_node[g_original_index].depth,beta)); // Tree prior
+                2*log(1-alpha/pow(1+(list_node[g_original_index].depth+1),beta))-beta*log(alpha*(1+list_node[g_original_index].depth))-log(1-alpha/pow(1+list_node[g_original_index].depth,beta)); // Tree prior
 
+
+        // double log_acceptance = 2*log(1-alpha/pow(1+(list_node[g_original_index].depth+1),beta))-beta*log(alpha*(1+list_node[g_original_index].depth))-log(1-alpha/pow(1+list_node[g_original_index].depth,beta)); // Tree prior
+        // double log_acceptance = 0;
+        double acceptance = exp(log_acceptance);
+        double unif_sample  = R::runif(0,1);
         // Updating the tree
-        if(R::runif(0,1)<=exp(log_acceptance)){
+        if((unif_sample<=acceptance)==1){
+
+                // cout << " ACCEPT!" << endl;
+                // Updating the current node
+                list_node[g_original_index].left = max_index+1;
+                list_node[g_original_index].right = max_index+2;
+
 
                 // Updating the current_tree
                 list_node.insert(list_node.begin()+g_original_index+1,
@@ -281,24 +476,23 @@ void Tree::prune(arma::vec& res_val,double tau, double tau_mu, double& alpha, do
         int n_terminal = 0;
         int id_node;
         // Do not prune a ROOT never
-        if(list_node.size()==0){
+        if(list_node.size()<3){
                 return;
         }
 
         // Getting the parent of terminal node only
         for(int i = 0; i<list_node.size();i++){
-                if(list_node[i].isTerminal()==0){
-                        if(list_node[i+1].isTerminal()== 1 && list_node[i+2].isTerminal()==1){
+                if(list_node[i].isTerminal()){
+                        n_terminal++;
+                } else {
+                        if((list_node[i+1].isTerminal()) & (list_node[i+2].isTerminal())){
                                 nog_list.push_back(list_node[i]);
                                 nog_original_index_vec.push_back(i);
                                 nog_counter++;
                         }
-                } else {
-                        n_terminal++;
                 }
         }
 
-        // Sampling a random node to be pruned
         int p_node_index = sample_int(nog_list.size());
         int nog_original_index = nog_original_index_vec(p_node_index);
         Node p_node = nog_list[p_node_index];
@@ -311,10 +505,16 @@ void Tree::prune(arma::vec& res_val,double tau, double tau_mu, double& alpha, do
         Rcpp::NumericVector res_right_val;
         Rcpp::NumericVector res_curr_val;
 
+        int left_pruned_index = p_node.left;
+        int right_pruned_index = p_node.right;
+
+
         // Creating the left residuals vector
         for(int l = 0;l<list_node[id_node+1].obs_train.size();l++){
                 res_left_val.push_back(res_val(list_node[id_node+1].obs_train(l)));
         }
+
+
 
         // Creating the right residuals vector
         for(int r = 0; r <list_node[id_node+2].obs_train.size(); r++){
@@ -326,19 +526,92 @@ void Tree::prune(arma::vec& res_val,double tau, double tau_mu, double& alpha, do
                 res_curr_val.push_back(res_val(list_node[id_node].obs_train(c)));
         }
 
+        if(n_terminal <2){
+                cout << "ERROR ERROR" << endl;
+                return;
+        }
+
+
+
         double log_acceptance = loglikelihood(res_curr_val,tau,tau_mu) - loglikelihood(res_left_val,tau,tau_mu) - loglikelihood(res_right_val,tau,tau_mu)+ // Node loglikelihood
                 log(0.3/(n_terminal-1))-log(0.3/nog_counter) + // Transition prob
                 log(1-alpha/pow(1+list_node[id_node].depth,beta))-(2*log(1-alpha/pow(1+(list_node[id_node].depth+1),beta))+beta*log(alpha*(1+list_node[id_node].depth))); // Tree prior
 
+        // return;
+
+        // New node list
+        vector<Node> new_node_list;
         // Pruning the tree
         if(R::runif(0,1) < exp(log_acceptance)){
                 list_node[nog_original_index].left = -1;
                 list_node[nog_original_index].right = -1;
 
-                // Erasing the new vectors
-                list_node.erase(list_node.begin()+id_node+1,list_node.begin()+id_node+3);
+                // Iterating over the current number of nodes one more time
+                for(int j = 0; j<list_node.size(); j++){
+                        if(list_node[j].index!=left_pruned_index & list_node[j].index!=right_pruned_index){
+                                new_node_list.push_back(list_node[j]);
+                        }
+                }
 
+                // Replacing the new nodes
+                list_node = new_node_list;
         }
+
+
+        return;
+
+}
+
+
+
+// Pruning a tree
+void Tree::prune_new_tree(double tau, double tau_mu, double& alpha, double& beta, int& id_t, int& node_id){
+
+        // Selecting possible parents of terminal nodes to prune
+        vector<Node> nog_list;
+        Rcpp::NumericVector nog_original_index_vec;
+        int nog_counter = 0;
+        int n_terminal = 0;
+        int id_node;
+        // Do not prune a ROOT never
+        if(list_node.size()<3){
+                return;
+        }
+
+        // Getting the parent of terminal node only
+        for(int i = 0; i<list_node.size();i++){
+                if(list_node[i].isTerminal()==0){
+                        if((list_node[i+1].isTerminal()) & (list_node[i+2].isTerminal())){
+                                nog_list.push_back(list_node[i]);
+                                nog_original_index_vec.push_back(i);
+                        }
+                }
+        }
+
+        // Saving information from the selected node
+        int p_node_index = sample_int(nog_list.size());
+        int nog_original_index = nog_original_index_vec(p_node_index);
+        Node p_node = nog_list[p_node_index];
+
+        int left_pruned_index = p_node.left;
+        int right_pruned_index = p_node.right;
+
+        // Turning back into a terminal node
+        list_node[nog_original_index].left = -1;
+        list_node[nog_original_index].right = -1;
+
+        // New node list
+        vector<Node> new_node_list;
+
+        for(int i = 0; i<list_node.size();i++){
+                // Removing the leaves
+                if(list_node[i].index!=left_pruned_index & list_node[i].index!=right_pruned_index){
+                        new_node_list.push_back(list_node[i]);
+                }
+        }
+
+        // Replacing the new list of nodes
+        list_node = new_node_list;
 
         return;
 
@@ -347,7 +620,7 @@ void Tree::prune(arma::vec& res_val,double tau, double tau_mu, double& alpha, do
 
 
 // Growing a tree
-void Tree::change(arma::vec res_values,
+void Tree::change(arma::vec& res_values,
                 const arma::mat& x_train,const arma::mat& x_test,
                 int node_min_size,const Rcpp::NumericMatrix& x_cut,
                 double& tau, double& tau_mu, double& alpha, double& beta){
@@ -358,8 +631,8 @@ void Tree::change(arma::vec res_values,
 
         // Getting the parent of terminal node only
         for(int i = 0; i<list_node.size();i++){
-                if(list_node[i].isTerminal()==0){
-                        if(list_node[i+1].isTerminal()== 1 && list_node[i+2].isTerminal()==1){
+                if(list_node[i].noTerminal()){
+                        if((list_node[i+1].isTerminal()) & (list_node[i+2].isTerminal())){
                                 nog_list.push_back(list_node[i]);
                                 nog_original_index_vec.push_back(i);
                         }
@@ -408,7 +681,7 @@ void Tree::change(arma::vec res_values,
 
                 // Create a vector of splits that will lead to nontrivial terminal nodes
                 for(int k = 0; k<x_cut_candidates.size();k++){
-                        if(x_cut_candidates(k)>min_x_current_node && x_cut_candidates(k)<max_x_current_node){
+                        if((x_cut_candidates(k)>min_x_current_node) && (x_cut_candidates(k)<max_x_current_node)){
                                 x_cut_valid.push_back(x_cut_candidates(k));
                         }
                 }
@@ -423,6 +696,7 @@ void Tree::change(arma::vec res_values,
                         if(cov_trial_counter == p){
                                 return;
                         }
+
                 } else {
 
                         // Verifying that a valid split was selected
@@ -430,7 +704,6 @@ void Tree::change(arma::vec res_values,
                 }
 
         }
-
 
 
         // Sample a g_var
@@ -458,7 +731,7 @@ void Tree::change(arma::vec res_values,
         Rcpp::NumericVector curr_res;
 
         /// Iterating over the train and test
-        for(int j=0; j<list_node[nog_original_index].obs_train.size();j++){
+        for(int j=0; j<c_node->obs_train.size();j++){
 
                 // UPDATING FOR THE CURRENT NODES
                 // cout << "ERROR 2 " << endl;
@@ -489,7 +762,7 @@ void Tree::change(arma::vec res_values,
         // cout << "ERROR 5 " << endl;
 
         /// Iterating over the test and test
-        for(int i=0; i<list_node[nog_original_index].obs_test.size();i++){
+        for(int i=0; i<c_node->obs_test.size();i++){
                 if(x_test(c_node->obs_test(i),split_var)<=split_var_rule){
                         // Saving the index
                         new_left_test_index.push_back(c_node->obs_test(i));
@@ -498,9 +771,6 @@ void Tree::change(arma::vec res_values,
 
                 }
         }
-
-        // cout << "ERROR 6 " << endl;
-
 
         // Calculating all loglikelihood
         double log_acceptance = loglikelihood(new_resid_left_train,tau,tau_mu) + loglikelihood(new_resid_right_train,tau,tau_mu) - loglikelihood(curr_resid_left_train,tau,tau_mu) - loglikelihood(curr_resid_right_train,tau,tau_mu);
@@ -528,6 +798,158 @@ void Tree::change(arma::vec res_values,
 };
 
 
+// Growing a tree
+void Tree::change_new_tree(const arma::mat& x_train,const arma::mat& x_test,
+                  int node_min_size,const Rcpp::NumericMatrix& x_cut,
+                  double& tau, double& tau_mu, double& alpha, double& beta,
+                  int& id_t, int& node_id){
+
+        // Selecting possible parents of terminal nodes to prune
+        vector<Node> nog_list;
+        Rcpp::NumericVector nog_original_index_vec;
+
+        // Getting the parent of terminal node only
+        for(int i = 0; i<list_node.size();i++){
+                if(list_node[i].noTerminal()){
+                        if((list_node[i+1].isTerminal()) & (list_node[i+2].isTerminal())){
+                                nog_list.push_back(list_node[i]);
+                                nog_original_index_vec.push_back(i);
+                        }
+                }
+        }
+
+        // Sampling a random node to be changed
+
+        Node* c_node; // Node to be grow
+        int p_node_index = sample_int(nog_list.size());
+        int nog_original_index = nog_original_index_vec(p_node_index);
+        c_node = &nog_list[p_node_index];
+
+
+        // cout << "NODE CHANGED IS " << c_node->index << endl;
+
+        // Defining the number of covariates
+        int p = x_train.n_cols;
+        int cov_trial_counter = 0; // To count if all the covariate were tested
+        int valid_split_indicator = 0;
+        int split_var;
+        double min_x_current_node;
+        double max_x_current_node;
+
+        Rcpp::NumericVector x_cut_valid; // Defining the vector of valid "split rules" based on xcut and the terminal node
+        Rcpp::NumericVector x_cut_candidates;
+
+        // Find a valid split indicator within a valid node
+        while(valid_split_indicator == 0){
+
+                // Getting the split var
+                split_var = sample_int(p);
+
+                // cout << "ERROR 1 " << endl;
+                // Selecting the x_curr
+                Rcpp::NumericVector x_current_node ;
+                for(int i = 0; i<c_node->obs_train.size();i++) {
+                        x_current_node.push_back(x_train(c_node->obs_train(i),split_var));
+                }
+
+                min_x_current_node = min(x_current_node);
+                max_x_current_node = max(x_current_node);
+
+                // Getting available xcut variables
+                x_cut_candidates = x_cut(_,split_var);
+
+                // Create a vector of splits that will lead to nontrivial terminal nodes
+                for(int k = 0; k<x_cut_candidates.size();k++){
+                        if((x_cut_candidates(k)>min_x_current_node) && (x_cut_candidates(k)<max_x_current_node)){
+                                x_cut_valid.push_back(x_cut_candidates(k));
+                        }
+                }
+
+
+                // IN THIS CASE I GUESS WE WILL ALMOST NEVER GONNA GET HERE SINCE IT'S ALREADY A VALID SPLIT FROM
+                //A GROW MOVE
+                if(x_cut_valid.size()==0){
+
+                        cov_trial_counter++;
+                        // CHOOSE ANOTHER SPLITING RULE
+                        if(cov_trial_counter == p){
+                                id_t = -1;
+                                node_id = -1;
+                                return;
+                        }
+
+                } else {
+
+                        // Verifying that a valid split was selected
+                        valid_split_indicator = 1;
+                }
+
+        }
+
+
+        // Sample a g_var
+        double split_var_rule = x_cut_valid(sample_int(x_cut_valid.size()));
+
+        // Creating the new terminal nodes based on the new xcut selected value
+        // Getting observations that are on the left and the ones that are in the right
+        Rcpp::NumericVector new_left_train_index;
+        Rcpp::NumericVector new_right_train_index;
+
+        // Same from above but for test observations
+        // Getting observations that are on the left and the ones that are in the right
+        Rcpp::NumericVector new_left_test_index;
+        Rcpp::NumericVector new_right_test_index;
+
+        // Get the current vector of residuals
+        Rcpp::NumericVector curr_res;
+
+        /// Iterating over the train and test
+        for(int j=0; j<c_node->obs_train.size();j++){
+
+                // Updating for the NEW CHANGED NODES
+                if(x_train(c_node->obs_train(j),split_var)<=split_var_rule){
+                        new_left_train_index.push_back(c_node->obs_train(j));
+                        // Creating the residuals list
+                } else {
+                        new_right_train_index.push_back(c_node->obs_train(j));
+                }
+                // cout << "ERROR 4 " << endl;
+
+
+        }
+
+
+        /// Iterating over the test and test
+        for(int i=0; i<c_node->obs_test.size();i++){
+                if(x_test(c_node->obs_test(i),split_var)<=split_var_rule){
+                        // Saving the index
+                        new_left_test_index.push_back(c_node->obs_test(i));
+                } else {
+                        new_right_test_index.push_back(c_node->obs_test(i));
+
+                }
+        }
+
+        // TREE CHANGED!
+        // cout << "TREE " << list_node[nog_original_index].index << " CHANGED" <<endl;
+        // Updating all the left and right nodes, respectively
+        list_node[nog_original_index+1].obs_train =  new_left_train_index;
+        list_node[nog_original_index+1].obs_test = new_left_test_index;
+        list_node[nog_original_index+1].var = split_var;
+        list_node[nog_original_index+1].var_split = split_var_rule;
+
+        list_node[nog_original_index+2].obs_train =  new_right_train_index;
+        list_node[nog_original_index+2].obs_test = new_right_test_index;
+        list_node[nog_original_index+2].var = split_var;
+        list_node[nog_original_index+2].var_split = split_var_rule;
+
+
+        // Finishing the process;
+        return;
+
+};
+
+
 // Updating tree prediction
 void Tree::getPrediction(arma::vec &train_pred_vec,
                          arma::vec &test_pred_vec){
@@ -536,7 +958,7 @@ void Tree::getPrediction(arma::vec &train_pred_vec,
         for(int i=0; i<list_node.size();i++){
 
                 // Checking only over terminal nodes
-                if(list_node[i].isTerminal()==1){
+                if(list_node[i].isTerminal()){
 
                         // Iterating over the train observations
                         for(int j=0;j<list_node[i].obs_train.size();j++){
@@ -566,7 +988,7 @@ double update_tau(const arma::vec& y,
         int n = y.size();
         double sum_sq_res = 0;
         for(int i = 0;i<n;i++){
-                sum_sq_res = sum_sq_res + (y[i]-y_hat[i])*(y[i]-y_hat[i]);
+                sum_sq_res = sum_sq_res + (y(i)-y_hat(i))*(y(i)-y_hat(i));
         }
         return R::rgamma((0.5*n+a_tau),1/(0.5*sum_sq_res+d_tau));
 }
@@ -633,12 +1055,10 @@ List bart(const arma::mat& x_train,
 
                 prediction_test_sum.zeros();
 
-
-
                 for(int t = 0; t<n_tree;t++){
 
                         // Updating the partial residuals
-                        partial_residuals = y - partial_pred + tree_fits_store.col(t);
+                        partial_residuals = y ;//- partial_pred + tree_fits_store.col(t);
 
                         //Setting probabilities to the choice of the verb
                         // Grow: 0-0.3;
@@ -660,7 +1080,7 @@ List bart(const arma::mat& x_train,
                                 current_trees[t].grow(partial_residuals,x_train,x_test,n_min_size,x_cut,tau,tau_mu,alpha,beta);
                         } else if(verb >=0.3 & verb<0.6){
                                 // cout << " PRUNE THE TREE " << endl;
-                                current_trees[t].prune(partial_residuals,tau,tau_mu,alpha,beta);
+                                // current_trees[t].prune(partial_residuals,tau,tau_mu,alpha,beta);
                         } else {
                                 // cout << " CHANGE THE TREE" << endl;
                                 current_trees[t].change(partial_residuals,x_train,x_test,n_min_size,x_cut,tau,tau_mu,alpha,beta);
@@ -675,27 +1095,28 @@ List bart(const arma::mat& x_train,
                         current_trees[t].getPrediction(prediction_train,prediction_test);
 
                         // Replacing the value for the partial pred
-                        partial_pred = partial_pred-tree_fits_store.col(t) + prediction_train;
-                        tree_fits_store.col(t) = prediction_train;
+                        // partial_pred = partial_pred-tree_fits_store.col(t) + prediction_train;
+                        // tree_fits_store.col(t) = prediction_train;
 
                         // Summing up the test prediction
                         prediction_test_sum += prediction_test;
                 };
 
                 // Updating tau
-                tau = update_tau(y,partial_pred,tau,tau_mu);
-
+                tau = update_tau(y,prediction_train,tau,tau_mu);
                 // cout << "Iter number " << i << endl;
 
                 if(i >= n_burn){
-                        y_train_hat_post.col(post_counter) = partial_pred;
+                        y_train_hat_post.col(post_counter) = prediction_train;
                         y_test_hat_post.col(post_counter) = prediction_test_sum;
 
                         // Updating tau
                         tau_post(post_counter) = tau;
                         post_counter++;
                 }
+
         }
+        cout << "Current tree size is: " << current_trees[0].list_node.size() << endl;
 
         return Rcpp::List::create(_["y_train_hat_post"] = y_train_hat_post,
                                   _["y_test_hat_post"] = y_test_hat_post,
@@ -705,22 +1126,63 @@ List bart(const arma::mat& x_train,
 
 
 //[[Rcpp::export]]
-void test_grow_tree(arma::mat x_train,
-               arma::mat x_test,
-               arma:: vec y_train,
+void test_grow_tree(Rcpp::NumericMatrix x_train,
+                    Rcpp::NumericMatrix x_test,
+                    Rcpp::NumericVector y_train,
                Rcpp::NumericMatrix x_cut,
                double alpha,
                double beta,
                int node_min_size,
                double tau,
-               double tau_mu){
+               double tau_mu,
+               int g_times){
+
+        Tree new_tree(x_train.nrow(), x_test.nrow());
+        int id_t = 0;
+        int id_node = 0;
+
+        // new_tree.DisplayNodes();
+
+        return;
+
+}
+
+//[[Rcpp::export]]
+void NEW_test_grow_tree(arma::mat x_train,
+                    arma::mat x_test,
+                    arma::vec y_train,
+                    Rcpp::NumericMatrix x_cut,
+                    double alpha,
+                    double beta,
+                    int node_min_size,
+                    double tau,
+                    double tau_mu,
+                    int g_times){
 
         Tree new_tree(x_train.n_rows, x_test.n_rows);
-        new_tree.DisplayNodes();
-        for(int i = 0;i<10;i++){
-                new_tree.grow(y_train,x_train,x_test,node_min_size,x_cut,tau,tau_mu,alpha,beta);
+
+        cout << "Init tree size " << new_tree.list_node.size() << endl;
+
+        for(int i = 0;i<g_times;i++){
+                new_tree.grow(y_train,
+                              x_train,
+                              x_test,
+                              node_min_size,
+                              x_cut,
+                              tau,
+                              tau_mu,
+                              alpha,
+                              beta);
         }
-        new_tree.DisplayNodes();
+        cout << " Final tree size " << new_tree.list_node.size() << endl;
+
+
+        // for(int j = 0; j<200; j++){
+        //         new_tree.prune(y_train,tau,tau_mu,alpha,beta);
+        // }
+        //
+        // cout << " Final tree size v2. " << new_tree.list_node.size() << endl;
+
 
         return;
 
@@ -755,6 +1217,34 @@ void test_prune_tree(arma::mat x_train,
 }
 
 //[[Rcpp::export]]
+void NEW_test_prune_tree(arma::mat x_train,
+                     arma::mat x_test,
+                     arma:: vec y_train,
+                     Rcpp::NumericMatrix x_cut,
+                     double alpha,
+                     double beta,
+                     int node_min_size,
+
+                     double tau,
+                     double tau_mu,
+                     double p_times){
+
+        Tree new_tree(x_train.n_rows, x_test.n_rows);
+        // new_tree.DisplayNodes();
+        for(int i = 0;i<10;i++){
+                new_tree.grow(y_train,x_train,x_test,node_min_size,x_cut,tau,tau_mu,alpha,beta);
+        }
+
+        for(int j = 0; j<p_times; j++){
+                new_tree.prune(y_train,tau,tau_mu,alpha,beta);
+        }
+
+        return;
+
+}
+
+
+//[[Rcpp::export]]
 void test_change_tree(arma::mat x_train,
                      arma::mat x_test,
                      arma:: vec y_train,
@@ -779,6 +1269,34 @@ void test_change_tree(arma::mat x_train,
         cout << "Change Two Treee size: " << new_tree.list_node.size() << endl;
         new_tree.DisplayNodes();
         return;
+}
+
+//[[Rcpp::export]]
+void NEW_test_change_tree(arma::mat x_train,
+                      arma::mat x_test,
+                      arma:: vec y_train,
+                      Rcpp::NumericMatrix x_cut,
+                      double alpha,
+                      double beta,
+                      int node_min_size,
+
+                      double tau,
+                      double tau_mu,
+                      int n_change
+                      ){
+
+        Tree new_tree(x_train.n_rows, x_test.n_rows);
+        // new_tree.DisplayNodes();
+        for(int i = 0;i<100;i++){
+                new_tree.grow(y_train,x_train,x_test,node_min_size,x_cut,tau,tau_mu,alpha,beta);
+        }
+
+        // Changing a lot of times
+        for(int j = 0;j < n_change; j++) {
+                new_tree.change(y_train,x_train,x_test,node_min_size,x_cut,tau,tau_mu,alpha,beta);
+        }
+
+        return;
 
 }
 
@@ -787,3 +1305,17 @@ arma::mat matrix_leak(arma::mat x_train){
         return x_train;
 }
 
+//[[Rcpp::export]]
+void test(){
+        double value;
+        double cond;
+        value = R::runif(0,1);
+        cond  = exp(-5);
+        if(value<=cond){
+                cout << "YES" << endl;
+                return;
+        } else {
+                return ;
+        }
+
+}

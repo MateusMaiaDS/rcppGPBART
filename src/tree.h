@@ -72,6 +72,8 @@ class Node{
                 };
                 void DisplayNode();
                 bool isTerminal(){ return((left == -1) & (right == -1));};
+                bool noTerminal(){ return((left != -1) & (right != -1));};
+
                 // double loglikelihood(arma::vec& residuals_values, double tau, double tau_mu);
                 void update_mu(arma::vec& residuals_values, double tau, double tau_mu);
 };
@@ -118,15 +120,23 @@ public:
         void update_mu_tree(arma::vec& res_val, double tau, double tau_mu);
         void update_mu_tree_linero(arma::vec& res_val, double tau, double tau_mu,int& n_leaves, double& sq_mu_norm);
         // Growing a tree
-        void grow(arma::vec res_values,
+        void grow(arma::vec& res_values,
                   const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
                   double&tau, double& tau_mu, double& alpha, double& beta);
+        // Growing a new tree
+        void grow_new_tree(const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
+                  double&tau, double& tau_mu, double& alpha, double& beta, int& id_t, int& id_node);
         // Creating the verb to prune a tree
         void prune(arma::vec& res_val, double tau, double tau_mu, double& alpha, double& beta);
+        void prune_new_tree(double tau, double tau_mu, double& alpha, double& beta, int& id_t, int& id_node);
+
         // Change a tree
-        void change(arma::vec res_values,
+        void change(arma::vec& res_values,
                     const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
                     double&tau, double& tau_mu, double& alpha, double& beta);
+        // Change a tree
+        void change_new_tree(const arma::mat& x_train,const arma::mat& x_test,int node_min_size,const Rcpp::NumericMatrix& x_cut,
+                    double&tau, double& tau_mu, double& alpha, double& beta, int& id_t, int& id_node);
         // Function to calculate the tree prior loglikelihood
         double prior_loglilke(double alpha, double beta);
         // Updating the tree predictions
@@ -141,7 +151,7 @@ void Node::DisplayNode(){
         std::cout << "Decision Rule -> Var:  " << var << " & Rule: " << var_split << endl;
         std::cout << "Left <-  " << left << " & Right -> " << right << endl;
 
-        if(true){
+        if(false){
                 std::cout << "Observations train: " ;
                 for(int i = 0; i<obs_train.size(); i++){
                         std::cout << obs_train[i] << " ";
@@ -149,7 +159,7 @@ void Node::DisplayNode(){
                 std::cout << endl;
         }
 
-        if(true){
+        if(false){
                 std::cout << "Observations test: " ;
                 for(int i = 0; i<obs_test.size(); i++){
                         std::cout << obs_test[i] << " ";
@@ -175,7 +185,7 @@ vector<Node> Tree::getTerminals(){
         vector<Node> terminalNodes;
 
         for(int i = 0; i<list_node.size(); i++){
-                if(list_node[i].isTerminal()==1 ){ // Check this again, might remove the condition of being greater than 5
+                if(list_node[i].isTerminal() ){ // Check this again, might remove the condition of being greater than 5
                         terminalNodes.push_back(list_node[i]); // Adding the terminals to the list
                 }
         }
